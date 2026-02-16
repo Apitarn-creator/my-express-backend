@@ -1,44 +1,56 @@
-// ไฟล์: app.mjs (อัปเดตใหม่)
 import express from "express";
 import cors from "cors";
+import pg from "pg";
+import dotenv from "dotenv";
 
+dotenv.config();
+
+const { Pool } = pg;
 const app = express();
 const port = process.env.PORT || 4000;
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
 app.use(cors());
 app.use(express.json());
 
-// 1. Route หน้าแรก (เดิม)
 app.get("/", (req, res) => {
-  res.send("Hello TechUp!");
+  res.send("Hello TechUp! API is running.");
 });
 
-// 2. เพิ่ม Route สำหรับ Health Check (เพื่อให้ HealthTestPage ทำงานได้)
-app.get("/health", (req, res) => {
-  res.status(200).json({ 
-    status: "success", 
-    message: "Backend is healthy and running on Vercel!" 
-  });
-});
+// ✅ API สร้างบทความ (แก้ไข Query ให้ตรงกับตาราง posts ในไฟล์ d)
+app.post("/assignments", async (req, res) => {
+  const { title, image, category_id, description, content, status_id } = req.body;
 
-// 3. เพิ่ม Route สำหรับ Posts (เพื่อให้หน้าบทความทำงานได้)
-// อันนี้จำลองข้อมูลส่งไปก่อน (Mock Data) เดี๋ยวค่อยเปลี่ยนเป็น Database จริงทีหลัง
-app.get("/posts", (req, res) => {
-  res.json([
-    {
-      id: 1,
-      title: "First Post from Vercel Backend",
-      category: "Highlight",
-      image: "https://placehold.co/600x400?text=Vercel+Backend",
-      author: "Admin",
-      description: "This data is coming from your new Express server on Vercel!",
-      content: "Success! The connection is working.",
-      date: "2024-03-20",
-      likes: 99
-    }
-  ]);
+  // Validation
+  if (!title || !image || !category_id || !description || !content || !status_id) {
+    return res.status(400).json({
+      message: "Server could not create post because there are missing data from client"
+    });
+  }
+
+  try {
+    // ⚠️ แก้ไขชื่อคอลัมน์ให้ตรงกับไฟล์ d (ใช้ date แทน created_at/updated_at)
+    await pool.query(
+      `INSERT INTO posts (title, image, category_id, description, content, status_id, date)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+      [title, image, category_id, description, content, status_id]
+    );
+
+    return res.status(201).json({
+      message: "Created post sucessfully"
+    });
+
+  } catch (err) {
+    console.error("Database Error:", err);
+    return res.status(500).json({
+      message: "Server could not create post because database connection"
+    });
+  }
 });
 
 app.listen(port, () => {
-  console.log(`Server is running at ${port}`);
+  console.log(`Server is running at port ${port}`);
 });
