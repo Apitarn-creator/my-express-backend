@@ -1,8 +1,8 @@
-import pg from "pg";
-const { Pool } = pg;
+import * as pg from "pg";
+const { Pool } = pg.default;
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || "postgresql://postgres:nobitanomoney@db.ohmvcercqgbzzttzfibv.supabase.co:5432/postgres",
+const connectionPool = new Pool({
+  connectionString: process.env.DATABASE_URL, 
 });
 
-export default pool;
+export default connectionPool;
