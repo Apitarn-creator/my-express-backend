@@ -1,31 +1,46 @@
 import 'dotenv/config';
 import express from 'express';
-import cors from 'cors'; 
+import cors from 'cors';
 import postRouter from './routers/postRouter.mjs';
 import authRouter from './routers/authRouter.mjs';
-
-import protectUser from "./middlewares/protectUser.mjs";
-import protectAdmin from "./middlewares/protectAdmin.mjs";
+import commentRouter from './routers/commentRouter.mjs';
+import categoryRouter from './routers/categoryRouter.mjs';
+import likeRouter from './routers/likeRouter.mjs';
 
 const app = express();
 const port = 4000;
 
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:4173',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin "${origin}" not allowed`));
+  },
+  credentials: true,
+}));
+
 app.use(express.json());
 
 app.use('/posts', postRouter);
 app.use('/auth', authRouter);
+app.use('/comments', commentRouter);
+app.use('/categories', categoryRouter);
+app.use('/likes', likeRouter);
 
-
-app.get("/protected-route", protectUser, (req, res) => {
-  res.json({ message: "This is protected content", user: req.user });
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.get("/admin-only", protectAdmin, (req, res) => {
-  res.json({ message: "This is admin-only content", admin: req.user });
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(port, () => {
+    console.log(`✅ Server is running at http://localhost:${port}`);
+  });
+}
 
-// เปิด Server ให้ทำงาน
-app.listen(port, () => {
-  console.log(`Server is running at http://localhost:${port}`);
-});
+export default app;
